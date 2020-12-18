@@ -6,7 +6,14 @@
     <title>Raindrops</title>
     <link rel="stylesheet" type="text/css" href="style.css" media="screen"/>
 </head>
-<body onload="startGame()">
-<script type="module" language="javascript" src="app/app.js"></script>
+<body>
+    <div class="game-container">
+        <button action="play" onclick="dispatch()">PLAY</button>
+        <button action="how-to-play" onclick="dispatch()">HOW TO PLAY</button>
+    </div>
+</body>
+<script type="text/javascript" language="javascript" src="app/dispatcher.js"></script>
+<script type="text/javascript" language="javascript" src="app/visual_area.js"></script>
+<script type="text/javascript" language="javascript" src="app/calculate_area.js"></script>
 </body>
 </html>
