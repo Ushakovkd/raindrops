@@ -1,21 +1,30 @@
 const DEFAULT_AREA_BACKGROUND_COLOR = '#ededed';
-const DEFAULT_UPDATE_FREQUENCY = 10;
 const DEFAULT_SEA_COLOR = '#9aeaed';
 const DEFAULT_SEA_HEIGHT = 60;
 const DEFAULT_SEA_BORDER = null;
-const DEFAULT_SEA_INCREASE = 50;
 const DEFAULT_DROP_BORDER = { width: 5, color: '#8cbebf' };
 const DEFAULT_DROP_COLOR = '#a6e2e3';
-const DEFAULT_DROP_RADIUS = 50;
 
+const UPDATE_FREQUENCY = 8;
+const DROP_CREATING_FREQUENCY = 4000;
+const SEA_INCREASE = 50;
+const DROP_RADIUS = 50;
 
-document.addEventListener('play', () => initVisualFrame());
+var visualArea = null;
+
+document.addEventListener('play', () => play());
+
+function play() {
+    if (visualArea === null) {
+        initVisualFrame();
+    }
+    visualArea.startDropDown();
+}
 
 function initVisualFrame() {
-    const visualArea = new VisualArea(1000, 600);
-    const frameElement = visualArea.getRenderedFrameElement();
+    visualArea = new VisualArea(1000, 600);
+    const frameElement = visualArea.getFrameElement();
     document.body.append(frameElement);
-    visualArea.startDropDown();
 }
 
 class Shape {
@@ -105,10 +114,10 @@ class DynamicShape extends Shape {
         let amount = 0;
         const movingInterval = setInterval(() => {
             this.moveStep();
-            if (++amount === stepsAmount){
+            if (++amount === stepsAmount) {
                 window.clearInterval(movingInterval);
             };
-        }, DEFAULT_UPDATE_FREQUENCY);
+        }, UPDATE_FREQUENCY);
     }
 
     resizeStep() {
@@ -124,14 +133,15 @@ class DynamicShape extends Shape {
             if (++amount === stepsAmount){
                 window.clearInterval(resizingInterval);
             };
-        }, DEFAULT_UPDATE_FREQUENCY);
+        }, UPDATE_FREQUENCY);
     }
 }
 
 class MathDrop extends DynamicShape {
-    constructor(expression, radius = DEFAULT_DROP_RADIUS, color = DEFAULT_DROP_COLOR, border = DEFAULT_DROP_BORDER, moveHandler = dropDownMoveHandler) {
+    constructor(expression, result, radius = DROP_RADIUS, color = DEFAULT_DROP_COLOR, border = DEFAULT_DROP_BORDER, moveHandler = dropDownMoveHandler) {
         super(radius, radius, color, border, moveHandler);
         this._expression = expression;
+        this._result = result;
     }
 
     getExpression() {
@@ -139,14 +149,15 @@ class MathDrop extends DynamicShape {
     }
 }
 
+//min & max include
 function getRandomArbitrary(min, max) {
     min = Math.ceil(min);
     max = Math.floor(max);
-    return Math.floor(Math.random() * (max - min)) + min;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 class VisualArea {
-    constructor(width, height, background = DEFAULT_AREA_BACKGROUND_COLOR, updateFrequency = DEFAULT_UPDATE_FREQUENCY) {
+    constructor(width, height, background = DEFAULT_AREA_BACKGROUND_COLOR, updateFrequency = UPDATE_FREQUENCY) {
         this._background = background;
         this._updateFrequency = updateFrequency;
         this._area = document.createElement("canvas");
@@ -154,89 +165,124 @@ class VisualArea {
         this._area.height = height;
         this._area.style.background = background;
         this._areaContext = this._area.getContext("2d");
-        this._renderObjects = [];
+        this._drops = [];
     }
 
-    getRenderedFrameElement() {
-        this.clear();
+    getFrameElement() {
         return this._area;
     }
 
     startDropDown() {
+        this.clear();
         this.initSea();
         this.startRerender();
-        this.startDropCreating(2000);
+        this.startDropCreating(DROP_CREATING_FREQUENCY);
     }
 
-    stopDropDown() {
+    clear() {
         clearInterval(this._rerenderInterval);
         clearInterval(this._creatingInterval);
+        this._drops = [];
+        this.renderBackground();
     }
 
-    addRenderObject(object) {
-        const x = getRandomArbitrary(object.getWidth(), this._area.width - object.getWidth());
-        const y = 0 - object.getHeight();
-        object.setCoordinates(x, y);
-        this._renderObjects.push(object);
-    }
+    initSea() {
+        this._sea = new DynamicShape(this._area.width, DEFAULT_SEA_HEIGHT, DEFAULT_SEA_COLOR, DEFAULT_SEA_BORDER, seaMoveHandler, seaIncreaseHandler);
+        const x = 0;
+        const y = this._area.height - this._sea.getHeight();
+        this._sea.setCoordinates(x, y);
 
-    startDropCreating(interval) {
-        this._creatingInterval = setInterval(() => this.addRenderObject(new MathDrop('29 + 30')), interval);
+        this.renderSea();
     }
 
     startRerender() {
         this._rerenderInterval = setInterval(() => this.reRender(), this._updateFrequency);
     }
 
+    stopRerender() {
+        clearInterval(this._rerenderInterval);
+    }
+
     reRender() {
-        if(this._renderObjects.length > 0) {
-            console.log(`rerender ${this._renderObjects.length} object(s)`);
-            this.clear();
-            for (let obj of this._renderObjects) {
-                this.renderMathDropStep(obj);
-            }
-            this.renderSeaStep();
-        } else {
-            console.log("waiting");
+        console.log(`rerender ${this._drops.length} object(s)`);
+        this.renderBackground();
+        for (let drop of this._drops) {
+            this.renderDropsNextStep(drop);
+        }
+        this.renderSea();
+    }
+
+    startDropCreating(interval) {
+        this.addFallingDrop();
+        this._creatingInterval = setInterval(() => this.addFallingDrop(), interval);
+    }
+
+    addFallingDrop() {
+        const drop = this.createRandomMathDrop();
+        const x = getRandomArbitrary(drop.getWidth(), this._area.width - drop.getWidth());
+        const y = 0 - drop.getHeight();
+        drop.setCoordinates(x, y);
+        this._drops.push(drop);
+    }
+    
+    createRandomMathDrop() {
+        const a = getRandomArbitrary(1, 99);
+        const b = getRandomArbitrary(1, 99);
+        const operator = getRandomArbitrary(1, 4);
+        
+        switch(operator) {
+            case 1:
+                return new MathDrop(`${a} + ${b}`, a + b);
+            case 2:
+                return new MathDrop(`${a} - ${b}`, a - b);
+            case 3:
+                return new MathDrop(`${a} * ${b}`, a * b);
+            case 4:
+                return new MathDrop(`${a} / ${b}`, a / b);
         }
     }
 
-    renderMathDropStep(figure) {
-        this.drowMathDrop(figure.getX(), figure.getY(), figure.getWidth(), figure.getBorder(), figure.getColor(), figure.getExpression());
+    renderDropsNextStep(figure) {
         figure.moveStep();
+        this.renderDrop(figure.getX(), figure.getY(), figure.getWidth(), figure.getBorder(), figure.getColor(), figure.getExpression());
 
-        const isDrowned = (figure.getY() + figure.getHeight()) > this._sea.getY();
-        const isFreeSpace = (this._sea.getY() - DEFAULT_SEA_INCREASE) > DEFAULT_DROP_RADIUS;
-        //ToDo 
-        if(!isFreeSpace) {
-            this.stopDropDown();
-        }
-        if(isDrowned) {
-            this._renderObjects.splice(0, 1);
-            this._sea.moving(DEFAULT_SEA_INCREASE);
-            this._sea.resizing(DEFAULT_SEA_INCREASE);
+        const dropBottom = figure.getY() + figure.getHeight();
+        const waterLevel = this._sea.getY();
+        const isDropFallen = dropBottom >= waterLevel;
+        if (isDropFallen) {
+            this._drops.splice(0, 1);
+            this.upSea(waterLevel);
         }
     }
 
-    initSea() {
-        this._sea = new DynamicShape(this._area.width, DEFAULT_SEA_HEIGHT, DEFAULT_SEA_COLOR, DEFAULT_SEA_BORDER, seaMoveHandler, seaIncreaseHandler);
-        this.renderSeaStep();
+    upSea(waterLevel) {
+        const isFreeSpaceForRaindrop = waterLevel > (SEA_INCREASE + DROP_RADIUS * 2);
+        if (isFreeSpaceForRaindrop) {
+            this._sea.moving(SEA_INCREASE);
+            this._sea.resizing(SEA_INCREASE);
+        } else {
+            const timeout = waterLevel * UPDATE_FREQUENCY * 1.2;
+            this.stopDropDown(timeout);
+            this._sea.moving(waterLevel);
+            this._sea.resizing(waterLevel);
+        }
     }
 
-    renderSeaStep() {
-        const { _sea, _area } = this;
-        const x = 0;
-        const y = _area.height - _sea.getHeight();
-        _sea.setCoordinates(x, y);
-        this.drowRectangle(x, y, _area.width, _area.height, _sea.getColor())
+    stopDropDown(timeout) {
+        clearInterval(this._creatingInterval);
+        this._drops = [];
+        setTimeout(() => {
+            clearInterval(this._rerenderInterval)
+        }, timeout);
     }
 
-    drowRectangle(x, y, width, height, color) {
-        this._areaContext.fillStyle = color;
-        this._areaContext.fillRect(x, y, width, height);
+    renderSea() {
+        const { _sea } = this;
+        this._areaContext.fillStyle = _sea.getColor();
+        this._areaContext.fillRect(_sea.getX(), _sea.getY(), _sea.getWidth(), _sea.getHeight());
     }
 
-    drowMathDrop(x, y, radius, border, color, expression) {
+    renderDrop(x, y, radius, border, color, expression) {
         this._areaContext.fillStyle = color;
         this._areaContext.beginPath();
         this._areaContext.ellipse(x, y, radius, radius, Math.PI / 4, 0, 2 * Math.PI);
@@ -245,15 +291,15 @@ class VisualArea {
         this._areaContext.strokeStyle = border.color;
         this._areaContext.lineWidth = border.width;
         this._areaContext.beginPath();
-        this._areaContext.ellipse(x, y, radius - 2.5 , radius - 2.5, Math.PI / 4, 0, 2 * Math.PI)
+        this._areaContext.ellipse(x, y, radius , radius, Math.PI / 4, 0, 2 * Math.PI)
         this._areaContext.stroke();
 
         this._areaContext.fillStyle = 'black';
         this._areaContext.font = "20px Arial";
-        this._areaContext.fillText(expression, x - radius * 0.7, y + 6);
+        this._areaContext.fillText(expression, x - radius * expression.length / 10, y + 6);
     }
 
-    clear() {
+    renderBackground() {
         this._areaContext.fillStyle = this._background;
         this._areaContext.clearRect(0, 0, this._area.width, this._area.height);
     }
