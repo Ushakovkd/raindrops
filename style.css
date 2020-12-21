@@ -1,0 +1,65 @@
+#game-container {
+    padding: 0;
+}
+.buttons-group {
+    margin: 1rem auto;
+    width: fit-content;
+}
+.visual-area {
+    display: inline-block;
+}
+.calculate-area {
+    display: inline-block;
+    vertical-align: top;
+    background-color: #bdf0e9;
+}
+.keyboard-wrapper {
+    padding: 0.5rem;
+    width: fit-content;
+    background: #ebdfab;
+    border-radius: 3px;
+    margin: 10% 2rem;
+}
+.keyboard{
+    display: grid;
+    grid-template-columns: 50px 50px 50px 50px;
+    grid-template-rows: 50px 50px 50px 50px 50px;
+    grid-auto-flow: row;
+}
+.vertical-span_2 {
+    grid-row: span 2;
+    font-size: 0.7rem;
+}
+.horizontal-span_2 {
+    grid-column: span 2;
+    font-size: 0.7rem;
+}
+.horizontal-span_4 {
+    grid-column: span 4;
+}
+.keyboard__display{
+    background: rgb(230, 230, 230);
+    color: white;
+    font-size: 2em;
+    padding: 0.3em;
+    text-align: right;
+    border:1px solid rgb(179, 179, 179);
+    grid-column: span 4;
+}
+.keyboard__button{
+    background: rgb(255, 255, 255);
+    font-size:1em;
+    font-weight: 700;;
+    border:1px solid rgb(179, 179, 179);
+    outline: none;
+}
+.keyboard__button.small_font {
+    font-size: 0.7em;
+}
+.keyboard__button:hover{
+    opacity: 0.9;
+}
+.keyboard__button:active{
+    opacity: 0.8;
+}
+

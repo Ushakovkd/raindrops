@@ -1,5 +1,6 @@
+var DEFAULT_AREA_HEIGHT = 600;
 const DEFAULT_AREA_BACKGROUND_COLOR = '#ededed';
-const DEFAULT_SEA_COLOR = '#9aeaed';
+const DEFAULT_SEA_COLOR = '#a7e7fa';
 const DEFAULT_SEA_HEIGHT = 60;
 const DEFAULT_SEA_BORDER = null;
 const DEFAULT_DROP_BORDER = { width: 5, color: '#8cbebf' };
@@ -22,9 +23,11 @@ function play() {
 }
 
 function initVisualFrame() {
-    visualArea = new VisualArea(1000, 600);
+    visualArea = new VisualArea(800, DEFAULT_AREA_HEIGHT);
     const frameElement = visualArea.getFrameElement();
-    document.body.append(frameElement);
+    frameElement.className = "  visual-area";
+    const gameContainer = document.getElementById("game-container");
+    gameContainer.append(frameElement);
 }
 
 class Shape {
