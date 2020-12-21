@@ -1,0 +1,16 @@
+#game-container {
+    padding: 0;
+}
+.buttons-group {
+    margin: 1rem auto;
+    width: fit-content;
+}
+.visual-area {
+    display: inline-block;
+}
+.calculate-area {
+    display: inline-block;
+    vertical-align: top;
+    background-color: #bdf0e9;
+    border-left: 3px solid #acd8d2;
+}
