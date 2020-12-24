@@ -1,8 +1,14 @@
-const buttonLabels = ['7','8','9','Clear','4','5','6','1','2','3','Enter','0','Delete'];
-const calculatorDisplayElementData = {tag: 'input', className: 'keyboard__display', value: '0', type: 'text'};
-const calculateAreaData = {tag: 'div', className: 'calculate-area'}
-const calculatorElementData = {tag: 'div', className: 'keyboard'}
-const containerElementData = {tag: 'div', className: 'keyboard-wrapper'}
+const calculateAreaHTMLData = { tag: 'div', className: 'calculate-area' };
+const inputBlockHTMLData = { tag: 'div', className: 'keyboard-wrapper' };
+const inputDisplayHTMLData = { tag: 'input', className: 'keyboard__display', value: '', type: 'text' };
+const keyboardHTMLData = { tag: 'div', className: 'keyboard' };
+const keyboardButtonsData = 
+    [
+        { label: '7' }, { label: '8' }, { label: '9' }, { label: 'Clear', template: 'high' },
+        { label: '4' }, { label: '5' }, { label: '6' },
+        { label: '1' }, { label: '2' }, { label: '3' }, { label: 'Enter', template: 'high' },
+        { label: '0', template: 'wide' }, { label: 'Delete' }
+    ];
 
 var calculateArea = null;
 
@@ -10,52 +16,44 @@ document.addEventListener('play', () => initCalculateArea());
 
 function initCalculateArea() {
     if (calculateArea === null) {
-    calculateArea = new CalculateArea();
-    const calculateAreaHTMLElement = calculateArea.getHTMLElement();
-    const gameContainer = document.getElementById("game-container");
-    gameContainer.append(calculateAreaHTMLElement);
-    console.log('init calculate area');
+        calculateArea = buildCalculateArea();
+        const calculateAreaHTMLElement = calculateArea.buildHtmlElement();
+        const gameContainer = document.getElementById("game-container");
+        gameContainer.append(calculateAreaHTMLElement);
     }
 }
 
-class CalculateArea {
-    constructor() {
-        this._keyboard = new Keyboard();
-    }
+function buildCalculateArea() {
+    const keyboard = createKeyboard();
 
-    getHTMLElement() {
-        const calculateArea = createElement(calculateAreaData);
-        calculateArea.append(this._keyboard.createKeyboardElement());
-        calculateArea.style.height = `${DEFAULT_AREA_HEIGHT}px`;
-        return calculateArea;
-    }
+    const inputBlock = new InputBlock(inputBlockHTMLData);
+    inputBlock.appendComponent(keyboard);
+
+    const calculateArea = new CalculateArea(calculateAreaHTMLData);
+    calculateArea.appendComponent(inputBlock);
+
+    return calculateArea;
 }
 
-class Keyboard {
-    createKeyboardElement() {
-        const calculatorElement = createElement(calculatorElementData);
 
-        const calculatorDisplayElement = createElement(calculatorDisplayElementData);
-        calculatorElement.append(calculatorDisplayElement);
+class KeyboardButton extends Component {
+    constructor(label, styleTemplate, tag = 'button', className = 'keyboard__button') {
+        super({tag, className, innerHtml: label});
+        this._styleTemplate = styleTemplate;
+    }
 
-        for (let i = 0; i < buttonLabels.length; i++) {
-            const label = buttonLabels[i];
-            const buttonElement = createElement({ tag: 'button', className: 'keyboard__button', innerHTML: label });
-            if (label == "Clear" || label == "Enter") {
-                buttonElement.classList.add('vertical-span_2', 'small_font');
-            }
-            if(label == "Delete") {
-                buttonElement.classList.add('small_font');
-            }
-            if(label == "0") {
-                buttonElement.classList.add('horizontal-span_2');
-            }
-            calculatorElement.append(buttonElement);
+    buildHtmlElement() {
+        const { _innerHtml, _styleTemplate } = this;
+        if (_innerHtml.length > 1) {
+            this.addClassName('small_font');
         }
-
-        const calculatorContainerElement = createElement(containerElementData);
-        calculatorContainerElement.append(calculatorElement);
-        return calculatorContainerElement;
+        if (_styleTemplate === 'wide') {
+            this.addClassName('horizontal-span_2');
+        }
+        if (_styleTemplate === 'high') {
+            this.addClassName('vertical-span_2');
+        }
+        return super.buildHtmlElement();
     }
 }
 
@@ -63,20 +61,27 @@ class ScoreDisplay {
 
 }
 
-function createElement(data) {
-    const {tag, className, value, type, innerHTML} = data;
-    const element = document.createElement(tag);
-    if (className) {
-        element.className = className;
+class InputBlock extends Component {
+   constructor(data) {
+       super(data);
+   }
+}
+
+class CalculateArea extends Component {
+    constructor(data) {
+        super(data);
     }
-    if (value) {
-        element.value = value;
+}
+
+function createKeyboard() {
+    const keyboard = new Component(keyboardHTMLData);
+
+    const inputDisplay = new Component(inputDisplayHTMLData);
+    keyboard.appendComponent(inputDisplay);
+
+    for (let data of keyboardButtonsData) {
+        const button = new KeyboardButton(data.label, data.template);
+        keyboard.appendComponent(button);
     }
-    if (type) {
-        element.type = type;
-    }
-    if (innerHTML) {
-        element.innerHTML = innerHTML;
-    }
-    return element;
+    return keyboard;
 }

@@ -12,6 +12,7 @@
     display: inline-block;
     vertical-align: top;
     background-color: #bdf0e9;
+    border-left: 3px solid #acd8d2;
 }
 .keyboard-wrapper {
     padding: 0.5rem;
@@ -62,4 +63,3 @@
 .keyboard__button:active{
     opacity: 0.8;
 }
-

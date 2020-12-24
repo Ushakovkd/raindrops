@@ -1,11 +1,15 @@
 var DEFAULT_AREA_HEIGHT = 600;
-const DEFAULT_AREA_BACKGROUND_COLOR = '#ededed';
-const DEFAULT_SEA_COLOR = '#a7e7fa';
+const DEFAULT_SEA_COLOR = '#a7f6fa';
 const DEFAULT_SEA_HEIGHT = 60;
-const DEFAULT_SEA_BORDER = null;
+const DEFAULT_SEA_BORDER = { width: 15, color: '#56bad3' };
 const DEFAULT_DROP_BORDER = { width: 5, color: '#8cbebf' };
 const DEFAULT_DROP_COLOR = '#a6e2e3';
 
+const SEA_WAVE_ADDITIONAL_COLOR = 'white';
+const SEA_ADDITIONAL_COLOR = '#d4f5ff';
+const AREA_GRADIENT_COLOR_FIRST = '#78c9f8';
+const AREA_GRADIENT_COLOR_SECOND = '#aedcf6';
+const AREA_GRADIENT_COLOR_THIRD = '#d3efff';
 const UPDATE_FREQUENCY = 8;
 const DROP_CREATING_FREQUENCY = 4000;
 const SEA_INCREASE = 50;
@@ -160,13 +164,11 @@ function getRandomArbitrary(min, max) {
 }
 
 class VisualArea {
-    constructor(width, height, background = DEFAULT_AREA_BACKGROUND_COLOR, updateFrequency = UPDATE_FREQUENCY) {
-        this._background = background;
+    constructor(width, height, updateFrequency = UPDATE_FREQUENCY) {
         this._updateFrequency = updateFrequency;
         this._area = document.createElement("canvas");
         this._area.width = width;
         this._area.height = height;
-        this._area.style.background = background;
         this._areaContext = this._area.getContext("2d");
         this._drops = [];
     }
@@ -281,8 +283,41 @@ class VisualArea {
 
     renderSea() {
         const { _sea } = this;
-        this._areaContext.fillStyle = _sea.getColor();
+        
+        _sea.setCoordinates(-15, _sea.getY()+10);
+        this._areaContext.strokeStyle = SEA_WAVE_ADDITIONAL_COLOR;
+        this._areaContext.lineWidth = _sea.getBorder().width;
+        this._areaContext.beginPath();
+        this._areaContext.moveTo(_sea.getX(), _sea.getY());
+        for(let i = 1; i < 50; i+=2) {
+            const step = 20;
+            this._areaContext.lineTo(_sea.getX()+step*i, _sea.getY()-step);
+            this._areaContext.lineTo(_sea.getX()+step*(i+1), _sea.getY());
+        }
+        this._areaContext.stroke();
+        _sea.setCoordinates(0, _sea.getY()-10);
+
+        const gradient = this._areaContext.createLinearGradient(_sea.getX(), _sea.getY(), 0, this._area.height);
+        gradient.addColorStop(0, _sea.getColor());
+        gradient.addColorStop(.4, SEA_ADDITIONAL_COLOR);
+        gradient.addColorStop(1, _sea.getColor());
+        this._areaContext.fillStyle = gradient;
         this._areaContext.fillRect(_sea.getX(), _sea.getY(), _sea.getWidth(), _sea.getHeight());
+
+        _sea.setCoordinates(0, _sea.getY()+10);
+        this._areaContext.strokeStyle = _sea.getBorder().color;
+        this._areaContext.lineWidth = _sea.getBorder().width;
+        this._areaContext.beginPath();
+        this._areaContext.moveTo(_sea.getX()-5, _sea.getY()+5);
+        for(let i = 1; i < 50; i+=2) {
+            const step = 20;
+            this._areaContext.lineTo(_sea.getX()+step*i, _sea.getY()-step);
+            this._areaContext.lineTo(_sea.getX()+step*(i+1), _sea.getY());
+        }
+        this._areaContext.stroke();
+        _sea.setCoordinates(0, _sea.getY()-10);
+
+        
     }
 
     renderDrop(x, y, radius, border, color, expression) {
@@ -303,12 +338,11 @@ class VisualArea {
     }
 
     renderBackground() {
-        this._areaContext.fillStyle = this._background;
-        this._areaContext.clearRect(0, 0, this._area.width, this._area.height);
+        const gradient = this._areaContext.createLinearGradient(0, 0, 0, this._area.height);
+        gradient.addColorStop(0, AREA_GRADIENT_COLOR_FIRST);
+        gradient.addColorStop(.5, AREA_GRADIENT_COLOR_SECOND);
+        gradient.addColorStop(1, AREA_GRADIENT_COLOR_THIRD);
+        this._areaContext.fillStyle = gradient;
+        this._areaContext.fillRect(0, 0, this._area.width, this._area.height);
     }
 }
-
-
-
-
-
