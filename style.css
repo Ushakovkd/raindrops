@@ -1,5 +1,6 @@
 #game-container {
-    padding: 0;
+    margin: auto;
+    width: fit-content;
 }
 .buttons-group {
     margin: 1rem auto;
@@ -14,18 +15,41 @@
     background-color: #bdf0e9;
     border-left: 3px solid #acd8d2;
 }
-.keyboard-wrapper {
+.score-screen {
+    margin: 1rem auto;
+    width: 60%;
+    text-align: center;
+    padding: 0.5rem;
+    background: rgb(230, 230, 230);
+    border: 3px solid white;
+    border-radius: 5px;
+    font-size: 20px;
+    font-weight: 700;
+    color: rgb(156, 27, 27);
+}
+.input-block {
     padding: 0.5rem;
     width: fit-content;
     background: #ebdfab;
     border-radius: 3px;
-    margin: 10% 2rem;
+    margin: 40% 2rem;
+
+    display: grid;
+    grid-template-columns: repeat(4, 50px);
+    grid-template-rows: repeat(5, 50px);
+    grid-auto-flow: row;
+}
+.input-block__display{
+    background: rgb(230, 230, 230);
+    /* color: white; */
+    font-size: 2em;
+    padding: 0.3em;
+    text-align: right;
+    border:1px solid rgb(179, 179, 179);
+    grid-column: span 4;
 }
 .keyboard{
-    display: grid;
-    grid-template-columns: 50px 50px 50px 50px;
-    grid-template-rows: 50px 50px 50px 50px 50px;
-    grid-auto-flow: row;
+    display: contents;
 }
 .vertical-span_2 {
     grid-row: span 2;
@@ -36,15 +60,6 @@
     font-size: 0.7rem;
 }
 .horizontal-span_4 {
-    grid-column: span 4;
-}
-.keyboard__display{
-    background: rgb(230, 230, 230);
-    color: white;
-    font-size: 2em;
-    padding: 0.3em;
-    text-align: right;
-    border:1px solid rgb(179, 179, 179);
     grid-column: span 4;
 }
 .keyboard__button{

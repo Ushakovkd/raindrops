@@ -1,6 +1,9 @@
+const GAME_FRAME_HEIGHT = 600;
+
 const playEvent = new Event('play', { bubbles: true });
 const playButtonHTMLData = { tag: 'button', onClick: () => this.event.target.dispatchEvent(playEvent), innerHtml: 'PLAY' };
 
+var gameContainerRef = null;
 
 function gameInit() {
     const buttonsGroup = new Component({ className: 'buttons-group' });
@@ -12,4 +15,5 @@ function gameInit() {
     gameContainer.appendComponent(buttonsGroup);
 
     document.body.append(gameContainer.buildHtmlElement());
+    gameContainerRef = document.getElementById('game-container');
 }

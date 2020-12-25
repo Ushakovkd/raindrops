@@ -1,4 +1,4 @@
-var DEFAULT_AREA_HEIGHT = 600;
+const VISUAL_FRAME_WIDTH = 800;
 const DEFAULT_SEA_COLOR = '#a7f6fa';
 const DEFAULT_SEA_HEIGHT = 60;
 const DEFAULT_SEA_BORDER = { width: 15, color: '#56bad3' };
@@ -16,8 +16,10 @@ const SEA_INCREASE = 50;
 const DROP_RADIUS = 50;
 
 var visualArea = null;
+var shootedValue = null;
 
 document.addEventListener('play', () => play());
+document.addEventListener('shoot', () => visualArea.shootHandler(shootedValue));
 
 function play() {
     if (visualArea === null) {
@@ -27,7 +29,7 @@ function play() {
 }
 
 function initVisualFrame() {
-    visualArea = new VisualArea(800, DEFAULT_AREA_HEIGHT);
+    visualArea = new VisualArea(VISUAL_FRAME_WIDTH, GAME_FRAME_HEIGHT);
     const frameElement = visualArea.getFrameElement();
     frameElement.className = "  visual-area";
     const gameContainer = document.getElementById("game-container");
@@ -154,6 +156,10 @@ class MathDrop extends DynamicShape {
     getExpression() {
         return this._expression;
     }
+
+    getResult() {
+        return this._result;
+    }
 }
 
 //min & max include
@@ -231,35 +237,44 @@ class VisualArea {
     }
     
     createRandomMathDrop() {
-        const a = getRandomArbitrary(1, 99);
-        const b = getRandomArbitrary(1, 99);
-        const operator = getRandomArbitrary(1, 4);
+        const a = getRandomArbitrary(1, 10);
+        const b = getRandomArbitrary(1, 10);
+        const operator = getRandomArbitrary(1, 3);
         
         switch(operator) {
             case 1:
                 return new MathDrop(`${a} + ${b}`, a + b);
             case 2:
-                return new MathDrop(`${a} - ${b}`, a - b);
+                const isNegative = a - b < 0;
+                return isNegative ? this.createRandomMathDrop() : new MathDrop(`${a} - ${b}`, a - b);
             case 3:
                 return new MathDrop(`${a} * ${b}`, a * b);
-            case 4:
-                return new MathDrop(`${a} / ${b}`, a / b);
         }
     }
 
-    renderDropsNextStep(figure) {
-        figure.moveStep();
-        this.renderDrop(figure.getX(), figure.getY(), figure.getWidth(), figure.getBorder(), figure.getColor(), figure.getExpression());
+    renderDropsNextStep(drop) {
+        drop.moveStep();
+        this.renderDrop(drop.getX(), drop.getY(), drop.getWidth(), drop.getBorder(), drop.getColor(), drop.getExpression());
 
-        const dropBottom = figure.getY() + figure.getHeight();
+        const dropBottom = drop.getY() + drop.getHeight();
         const waterLevel = this._sea.getY();
         const isDropFallen = dropBottom >= waterLevel;
         if (isDropFallen) {
-            this._drops.splice(0, 1);
+            this._drops.shift();
             this.upSea(waterLevel);
         }
     }
 
+    shootHandler = (value) => {
+        const index = this._drops.findIndex((drop) => drop.getResult() == value);
+        if (index == -1) {
+            gameContainerRef.dispatchEvent(new Event('miss', { bubbles: true }));
+        } else {
+            gameContainerRef.dispatchEvent(new Event('hit', { bubbles: true }));
+            this._drops.splice(index, 1);
+        }
+    }
+    
     upSea(waterLevel) {
         const isFreeSpaceForRaindrop = waterLevel > (SEA_INCREASE + DROP_RADIUS * 2);
         if (isFreeSpaceForRaindrop) {
