@@ -8,6 +8,7 @@
 }
 .visual-area {
     display: inline-block;
+    position: relative;
 }
 .calculate-area {
     display: inline-block;
@@ -27,6 +28,23 @@
     font-weight: 700;
     color: rgb(156, 27, 27);
 }
+
+.score-screen::before {
+    content: "Score: ";
+    color: rgb(49, 49, 49);
+}
+
+.pop-up-notification {
+    height: 50px;
+    width: fit-content;
+    top: 50%;
+    left: 50%;
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 50px;
+    font-weight: 700;
+    color: red;
+}
 .input-block {
     padding: 0.5rem;
     width: fit-content;
@@ -41,7 +59,6 @@
 }
 .input-block__display{
     background: rgb(230, 230, 230);
-    /* color: white; */
     font-size: 2em;
     padding: 0.3em;
     text-align: right;
