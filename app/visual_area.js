@@ -1,3 +1,4 @@
+const VISUAL_FRAME_CLASSNAME = 'visual-area';
 const VISUAL_FRAME_WIDTH = 800;
 const DEFAULT_SEA_COLOR = '#a7f6fa';
 const DEFAULT_SEA_HEIGHT = 60;
@@ -15,26 +16,6 @@ const DROP_CREATING_FREQUENCY = 4000;
 const SEA_INCREASE = 50;
 const DROP_RADIUS = 50;
 
-var visualArea = null;
-var shootedValue = null;
-
-document.addEventListener('play', () => play());
-document.addEventListener('shoot', () => visualArea.shootHandler(shootedValue));
-
-function play() {
-    if (visualArea === null) {
-        initVisualFrame();
-    }
-    visualArea.startDropDown();
-}
-
-function initVisualFrame() {
-    visualArea = new VisualArea(VISUAL_FRAME_WIDTH, GAME_FRAME_HEIGHT);
-    const frameElement = visualArea.getFrameElement();
-    frameElement.className = "  visual-area";
-    const gameContainer = document.getElementById("game-container");
-    gameContainer.append(frameElement);
-}
 
 class Shape {
     _coordinates = { x: 0, y: 0 };
@@ -169,23 +150,36 @@ function getRandomArbitrary(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-class VisualArea {
-    constructor(width, height, updateFrequency = UPDATE_FREQUENCY) {
+class VisualArea extends Component{
+    constructor(width, height, updateFrequency, onHit, onMiss, onGameOver) {
+        super({ className: VISUAL_FRAME_CLASSNAME });
         this._updateFrequency = updateFrequency;
-        this._area = document.createElement("canvas");
-        this._area.width = width;
-        this._area.height = height;
-        this._areaContext = this._area.getContext("2d");
+        this._width = width;
+        this._height = height;
+        this._onHit = onHit;
+        this._onMiss = onMiss;
+        this._onGameOver = onGameOver;
         this._drops = [];
     }
 
-    getFrameElement() {
-        return this._area;
+    buildHtmlElement() {
+        const canvas = new Component({ tag: 'canvas', id: 'raindrops-canvas', attributes: [{ name: 'height', value: this._height }, { name: 'width', value: this._width }] });
+        const popup = new Component({ id: 'pop-up', className: 'pop-up-notification', innerHtml: '' });
+        this.appendComponent(canvas, popup);
+
+        return super.buildHtmlElement();
+    }
+
+    init() {
+        this._canvasContext = document.getElementById('raindrops-canvas').getContext('2d');
+        this.renderBackground();
+        this.createSea();
+        this.renderDefaultSeaState();
+        this._popUpRef = document.getElementById('pop-up');
     }
 
     startDropDown() {
         this.clear();
-        this.initSea();
         this.startRerender();
         this.startDropCreating(DROP_CREATING_FREQUENCY);
     }
@@ -195,14 +189,19 @@ class VisualArea {
         clearInterval(this._creatingInterval);
         this._drops = [];
         this.renderBackground();
+        this.renderDefaultSeaState();
+        this._popUpRef.hidden = true
     }
 
-    initSea() {
-        this._sea = new DynamicShape(this._area.width, DEFAULT_SEA_HEIGHT, DEFAULT_SEA_COLOR, DEFAULT_SEA_BORDER, seaMoveHandler, seaIncreaseHandler);
-        const x = 0;
-        const y = this._area.height - this._sea.getHeight();
-        this._sea.setCoordinates(x, y);
+    createSea() {
+        this._sea = new DynamicShape(this._width, DEFAULT_SEA_HEIGHT, DEFAULT_SEA_COLOR, DEFAULT_SEA_BORDER, seaMoveHandler, seaIncreaseHandler);
+    }
 
+    renderDefaultSeaState() {
+        this._sea.setSize(this._width, DEFAULT_SEA_HEIGHT);
+        const x = 0;
+        const y = this._height - this._sea.getHeight();
+        this._sea.setCoordinates(x, y);
         this.renderSea();
     }
 
@@ -230,7 +229,7 @@ class VisualArea {
 
     addFallingDrop() {
         const drop = this.createRandomMathDrop();
-        const x = getRandomArbitrary(drop.getWidth(), this._area.width - drop.getWidth());
+        const x = getRandomArbitrary(drop.getWidth(), this._width - drop.getWidth());
         const y = 0 - drop.getHeight();
         drop.setCoordinates(x, y);
         this._drops.push(drop);
@@ -240,8 +239,8 @@ class VisualArea {
         const a = getRandomArbitrary(1, 10);
         const b = getRandomArbitrary(1, 10);
         const operator = getRandomArbitrary(1, 3);
-        
-        switch(operator) {
+
+        switch (operator) {
             case 1:
                 return new MathDrop(`${a} + ${b}`, a + b);
             case 2:
@@ -265,99 +264,114 @@ class VisualArea {
         }
     }
 
-    shootHandler = (value) => {
+    shotHandler(value) {
         const index = this._drops.findIndex((drop) => drop.getResult() == value);
         if (index == -1) {
-            gameContainerRef.dispatchEvent(new Event('miss', { bubbles: true }));
+            this._onMiss();
+            this.showAndHidePopUpMessage('-10');
         } else {
-            gameContainerRef.dispatchEvent(new Event('hit', { bubbles: true }));
+            this._onHit();
             this._drops.splice(index, 1);
         }
     }
     
+    showAndHidePopUpMessage(text) {
+        this.showPopUpMessage(text);
+        setTimeout(() => this._popUpRef.hidden = true, 500);
+    }
+
+    showPopUpMessage(text) {
+        this._popUpRef.hidden = false;
+        this._popUpRef.innerHTML = text;
+    }
+
     upSea(waterLevel) {
         const isFreeSpaceForRaindrop = waterLevel > (SEA_INCREASE + DROP_RADIUS * 2);
         if (isFreeSpaceForRaindrop) {
             this._sea.moving(SEA_INCREASE);
             this._sea.resizing(SEA_INCREASE);
         } else {
-            const timeout = waterLevel * UPDATE_FREQUENCY * 1.2;
-            this.stopDropDown(timeout);
-            this._sea.moving(waterLevel);
-            this._sea.resizing(waterLevel);
+            this.gameOver(waterLevel);
         }
+    }
+
+    gameOver(waterLevel) {
+        this._onGameOver();
+        const timeout = waterLevel * UPDATE_FREQUENCY * 1.2;
+        this.stopDropDown(timeout);
+        this._sea.moving(waterLevel);
+        this._sea.resizing(waterLevel);
     }
 
     stopDropDown(timeout) {
         clearInterval(this._creatingInterval);
         this._drops = [];
         setTimeout(() => {
-            clearInterval(this._rerenderInterval)
+            clearInterval(this._rerenderInterval);
+            this.showPopUpMessage('Game over');
         }, timeout);
     }
 
     renderSea() {
         const { _sea } = this;
         
-        _sea.setCoordinates(-15, _sea.getY()+10);
-        this._areaContext.strokeStyle = SEA_WAVE_ADDITIONAL_COLOR;
-        this._areaContext.lineWidth = _sea.getBorder().width;
-        this._areaContext.beginPath();
-        this._areaContext.moveTo(_sea.getX(), _sea.getY());
-        for(let i = 1; i < 50; i+=2) {
+        _sea.setCoordinates(-15, _sea.getY() + 10);
+        this._canvasContext.strokeStyle = SEA_WAVE_ADDITIONAL_COLOR;
+        this._canvasContext.lineWidth = _sea.getBorder().width;
+        this._canvasContext.beginPath();
+        this._canvasContext.moveTo(_sea.getX(), _sea.getY());
+        for (let i = 1; i < 50; i += 2) {
             const step = 20;
-            this._areaContext.lineTo(_sea.getX()+step*i, _sea.getY()-step);
-            this._areaContext.lineTo(_sea.getX()+step*(i+1), _sea.getY());
+            this._canvasContext.lineTo(_sea.getX() + step * i, _sea.getY() - step);
+            this._canvasContext.lineTo(_sea.getX() + step * (i + 1), _sea.getY());
         }
-        this._areaContext.stroke();
-        _sea.setCoordinates(0, _sea.getY()-10);
+        this._canvasContext.stroke();
+        _sea.setCoordinates(0, _sea.getY() - 10);
 
-        const gradient = this._areaContext.createLinearGradient(_sea.getX(), _sea.getY(), 0, this._area.height);
+        const gradient = this._canvasContext.createLinearGradient(_sea.getX(), _sea.getY(), 0, this._height);
         gradient.addColorStop(0, _sea.getColor());
         gradient.addColorStop(.4, SEA_ADDITIONAL_COLOR);
         gradient.addColorStop(1, _sea.getColor());
-        this._areaContext.fillStyle = gradient;
-        this._areaContext.fillRect(_sea.getX(), _sea.getY(), _sea.getWidth(), _sea.getHeight());
+        this._canvasContext.fillStyle = gradient;
+        this._canvasContext.fillRect(_sea.getX(), _sea.getY(), _sea.getWidth(), _sea.getHeight());
 
-        _sea.setCoordinates(0, _sea.getY()+10);
-        this._areaContext.strokeStyle = _sea.getBorder().color;
-        this._areaContext.lineWidth = _sea.getBorder().width;
-        this._areaContext.beginPath();
-        this._areaContext.moveTo(_sea.getX()-5, _sea.getY()+5);
-        for(let i = 1; i < 50; i+=2) {
+        _sea.setCoordinates(0, _sea.getY() + 10);
+        this._canvasContext.strokeStyle = _sea.getBorder().color;
+        this._canvasContext.lineWidth = _sea.getBorder().width;
+        this._canvasContext.beginPath();
+        this._canvasContext.moveTo(_sea.getX() - 5, _sea.getY() + 5);
+        for (let i = 1; i < 50; i += 2) {
             const step = 20;
-            this._areaContext.lineTo(_sea.getX()+step*i, _sea.getY()-step);
-            this._areaContext.lineTo(_sea.getX()+step*(i+1), _sea.getY());
+            this._canvasContext.lineTo(_sea.getX() + step * i, _sea.getY() - step);
+            this._canvasContext.lineTo(_sea.getX() + step * (i + 1), _sea.getY());
         }
-        this._areaContext.stroke();
-        _sea.setCoordinates(0, _sea.getY()-10);
-
-        
+        this._canvasContext.stroke();
+        _sea.setCoordinates(0, _sea.getY() - 10);
     }
 
     renderDrop(x, y, radius, border, color, expression) {
-        this._areaContext.fillStyle = color;
-        this._areaContext.beginPath();
-        this._areaContext.ellipse(x, y, radius, radius, Math.PI / 4, 0, 2 * Math.PI);
-        this._areaContext.fill();
+        this._canvasContext.fillStyle = color;
+        this._canvasContext.beginPath();
+        this._canvasContext.ellipse(x, y, radius, radius, Math.PI / 4, 0, 2 * Math.PI);
+        this._canvasContext.fill();
 
-        this._areaContext.strokeStyle = border.color;
-        this._areaContext.lineWidth = border.width;
-        this._areaContext.beginPath();
-        this._areaContext.ellipse(x, y, radius , radius, Math.PI / 4, 0, 2 * Math.PI)
-        this._areaContext.stroke();
+        this._canvasContext.strokeStyle = border.color;
+        this._canvasContext.lineWidth = border.width;
+        this._canvasContext.beginPath();
+        this._canvasContext.ellipse(x, y, radius, radius, Math.PI / 4, 0, 2 * Math.PI)
+        this._canvasContext.stroke();
 
-        this._areaContext.fillStyle = 'black';
-        this._areaContext.font = "20px Arial";
-        this._areaContext.fillText(expression, x - radius * expression.length / 10, y + 6);
+        this._canvasContext.fillStyle = 'black';
+        this._canvasContext.font = "20px Arial";
+        this._canvasContext.fillText(expression, x - radius * expression.length / 10, y + 6);
     }
 
     renderBackground() {
-        const gradient = this._areaContext.createLinearGradient(0, 0, 0, this._area.height);
+        const gradient = this._canvasContext.createLinearGradient(0, 0, 0, this._height);
         gradient.addColorStop(0, AREA_GRADIENT_COLOR_FIRST);
         gradient.addColorStop(.5, AREA_GRADIENT_COLOR_SECOND);
         gradient.addColorStop(1, AREA_GRADIENT_COLOR_THIRD);
-        this._areaContext.fillStyle = gradient;
-        this._areaContext.fillRect(0, 0, this._area.width, this._area.height);
+        this._canvasContext.fillStyle = gradient;
+        this._canvasContext.fillRect(0, 0, this._width, this._height);
     }
 }

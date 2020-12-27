@@ -1,6 +1,9 @@
+const DEFAULT_SCORE_SCREEN_ID = 'score-screen';
+const DEFAULT_SCORE_SCREEN_CLASSNAME = 'score-screen';
+const DEFAULT_INPUT_DISPLAY_ID = 'input-display';
+const DEFAULT_INPUT_DISPLAY_CLASSNAME = 'input-block__display';
 const DEFAULT_CALCULATE_AREA_CLASSNAME = 'calculate-area';
 const DEFAULT_INPUT_BLOCK_CLASSNAME = 'input-block';
-const INPUT_DISPLAY_COMPONENT_PARAMETERS = { tag: 'input', id: 'input-display', className: 'input-block__display', type: 'text', value: '', attributes: [{ name: 'disabled' }] };
 const DEFAULT_KEYBOARD_CLASSNAME = 'keyboard';
 const KEYBOARD_BUTTONS_DATA =
     [
@@ -9,26 +12,6 @@ const KEYBOARD_BUTTONS_DATA =
         { label: '1' }, { label: '2' }, { label: '3' }, { label: 'Enter', template: 'high' },
         { label: '0', template: 'wide' }, { label: 'Delete' }
     ];
-
-var calculateArea = null;
-var scoreScreen = null;
-
-document.addEventListener('play', () => initCalculateArea());
-document.addEventListener('hit', () => scoreScreen.innerHTML = Number(scoreScreen.innerHTML) + 10);
-document.addEventListener('miss', () => scoreScreen.innerHTML = Number(scoreScreen.innerHTML) - 10);
-
-
-function initCalculateArea() {
-    if (calculateArea === null) {
-        calculateArea = new CalculateArea();
-        const calculateAreaHTMLElement = calculateArea.buildHtmlElement();
-
-        const gameContainer = document.getElementById("game-container");
-        gameContainer.append(calculateAreaHTMLElement);
-
-        scoreScreen = document.getElementById('score-screen');
-    }
-}
 
 class KeyboardButton extends Component {
     constructor(label, styleTemplate, onClick, tag = 'button', className = 'keyboard__button') {
@@ -49,7 +32,6 @@ class KeyboardButton extends Component {
         }
         return super.buildHtmlElement();
     }
-
 }
 
 class Keyboard extends Component {
@@ -67,24 +49,43 @@ class Keyboard extends Component {
     }
 }
 
+class Display extends Component {
+    constructor(id, className, initialValue) {
+        super({ id, className, innerHtml: initialValue });
+        this._displayedValue = initialValue;
+    }
+
+    init() {
+        const elementRef = document.getElementById(this._id);
+        this.setElementRef(elementRef);
+    }
+
+    setDisplayedValue(value) {
+        this._elementRef.innerHTML = value;
+    }
+}
+
+
 class InputBlock extends Component {
     constructor(onSubmit, className = DEFAULT_INPUT_BLOCK_CLASSNAME) {
         super({ className });
         this._onSubmit = onSubmit;
+        this._inputValue = '';
+        this._isPlaying = false;
     }
 
     buildHtmlElement() {
-        const inputDisplay = new Component(INPUT_DISPLAY_COMPONENT_PARAMETERS);
+        this._inputDisplay = new Display(DEFAULT_INPUT_DISPLAY_ID, DEFAULT_INPUT_DISPLAY_CLASSNAME, this._inputValue);
         const keyboard = new Keyboard((value) => this.keyboardClickHandler(value));
 
-        this.appendComponent(inputDisplay, keyboard);
+        this.appendComponent(this._inputDisplay, keyboard);
 
         return super.buildHtmlElement();
     }
 
     keyboardClickHandler(value) {
-        if (!this._isValidDisplayRef) {
-            this.initDisplayRef();
+        if (!this._isPlaying) {
+            return;
         }
         if (isNaN(parseInt(value))) {
             this.handleSymbol(value);
@@ -94,52 +95,68 @@ class InputBlock extends Component {
     }
 
     handleNumber(value) {
-        this._displayRef.value = this._displayRef.value += value;
+        this._inputValue += value;
+        this._inputDisplay.setDisplayedValue(this._inputValue);
     }
 
     handleSymbol(value) {
         switch (value) {
             case 'Delete':
-                this._displayRef.value = this._displayRef.value.slice(0, -1);
+                this._inputValue = this._inputValue.slice(0, -1);;
+                this._inputDisplay.setDisplayedValue(this._inputValue);
                 break;
             case 'Enter':
-                this._onSubmit(this._displayRef.value);
+                if (value.length > 0) {
+                    this._onSubmit(this._inputValue);
+                }
             case 'Clear':
-                this._displayRef.value = '';
+                this._inputValue = '';
+                this._inputDisplay.setDisplayedValue(this._inputValue);
         }
     }
 
-    initDisplayRef() {
-        this._displayRef = document.getElementById(INPUT_DISPLAY_COMPONENT_PARAMETERS.id);
-        this._isValidDisplayRef = this.validateDisplayRef(this._displayRef);
+    setIsPlaying(value) {
+        this._isPlaying = value;
     }
 
-    validateDisplayRef(ref) {
-        const isValid = ref.id === INPUT_DISPLAY_COMPONENT_PARAMETERS.id && ref.className === INPUT_DISPLAY_COMPONENT_PARAMETERS.className;
-        if (!isValid) {
-            console.log("Invalid input value ref");
-        }
-        return isValid;
+    init() {
+        this._inputDisplay.init();
     }
 }
 
 class CalculateArea extends Component {
-    constructor(className = DEFAULT_CALCULATE_AREA_CLASSNAME) {
-        super({ className, attributes: [{ name: 'style', value: `height: ${GAME_FRAME_HEIGHT}px` }] });
+    constructor(onShot) {
+        super({ className: DEFAULT_CALCULATE_AREA_CLASSNAME, attributes: [{ name: 'style', value: `height: ${DEFAULT_GAME_FRAME_HEIGHT}px` }] });
+        this._onShot = onShot;
+        this._score = 0;
     }
 
     buildHtmlElement() {
-        const scoreScreen = new Component({ id: 'score-screen', className: 'score-screen', innerHtml: '0' });
-        const inputBlock = new InputBlock((value) => this.onSubmit(value));
-        this.appendComponent(scoreScreen, inputBlock);
+        this._scoreScreen = new Display(DEFAULT_SCORE_SCREEN_ID, DEFAULT_SCORE_SCREEN_CLASSNAME, this._score);
+        this._inputBlock = new InputBlock(this._onShot);
+        this.appendComponent(this._scoreScreen, this._inputBlock);
 
         return super.buildHtmlElement();
     }
 
-    onSubmit(value) {
-        if (value.length > 0) {
-            shootedValue = value;
-            gameContainerRef.dispatchEvent(new Event('shoot', { bubbles: true }));
+    onMiss() {
+        if (this._score >= 10) {
+            this._score -= 10;
+            this._scoreScreen.setDisplayedValue(this._score)
         }
+    }
+
+    onHit() {
+        this._score += 10;
+        this._scoreScreen.setDisplayedValue(this._score)
+    }
+
+    setIsPlaying(value) {
+        this._inputBlock.setIsPlaying(value);
+    }
+
+    init() {
+        this._scoreScreen.init();
+        this._inputBlock.init();
     }
 }

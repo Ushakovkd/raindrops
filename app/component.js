@@ -10,6 +10,7 @@ class Component {
         this._innerHtml = innerHtml;
         this._onClick = onClick;
         this._attributes = attributes;
+        this._elementRef = null;
         this._children = [];
     }
 
@@ -32,7 +33,7 @@ class Component {
         if (_type) {
             element.type = _type;
         }
-        if (_innerHtml) {
+        if (_innerHtml != null && _innerHtml != undefined) {
             element.innerHTML = _innerHtml;
         }
         if (_onClick) {
@@ -55,5 +56,13 @@ class Component {
 
     setInnerHtml(innerHtml) {
         this._innerHtml = innerHtml;
+    }
+
+    setElementRef(ref) {
+        this._elementRef = ref;
+    }
+
+    getElementRef() {
+        return this._elementRef;
     }
 }
